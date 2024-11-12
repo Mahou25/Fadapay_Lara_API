@@ -69,3 +69,169 @@ The Laravel framework is open-sourced software licensed under the [MIT license](
 # Fadapay_Lara_API
 C'est cet API j'ai consommé dans le dépôt flutter pour la transaction Fedapay.
 >>>>>>> bd2cb37793ddbd516a285317e0ed16f9a064f688
+
+Voici un modèle de **README** pour expliquer comment utiliser votre API Laravel pour FedaPay et la consommer dans Flutter, avec un accent particulier sur l'importance des clés API en fonction du type de compte (sandbox ou live).
+
+---
+
+# Documentation de l'API FedaPay pour Laravel
+
+## Introduction
+
+Cette API a été conçue pour permettre l'intégration des services FedaPay avec une application Flutter. Vous pouvez l'utiliser pour effectuer des transactions de paiement en ligne via FedaPay, en choisissant entre un environnement **sandbox** (test) ou **live** (production). Suivez les étapes ci-dessous pour configurer, utiliser et intégrer l'API dans votre projet.
+
+## Prérequis
+
+- **PHP 8.0 ou supérieur** avec Laravel 10.x
+- Clé API de FedaPay (disponible sur le tableau de bord de votre compte FedaPay)
+- Serveur fonctionnel (ex: **XAMPP**, **Laragon**, **VPS**, etc.)
+- Application Flutter pour consommer l'API
+
+## Étape 1 : Installation de l'API Laravel
+
+### 1.1 Clonez le projet
+
+Si vous n'avez pas encore cloné le dépôt, utilisez la commande suivante pour cloner le repository de l'API :
+
+```bash
+git clone https://github.com/Mahou25/Fadapay_Lara_API.git
+```
+
+### 1.2 Installez les dépendances
+
+Accédez au dossier du projet et installez les dépendances nécessaires via Composer :
+
+```bash
+cd Fadapay_Lara_API
+composer install
+```
+
+### 1.3 Configurez votre fichier `.env`
+
+Assurez-vous d'avoir configuré votre clé API dans le fichier `.env`. Les variables suivantes doivent être ajoutées ou mises à jour avec vos informations FedaPay :
+
+```env
+FEDAPAY_API_KEY=sk_live_-IYaLRe_b87hNRE5aOA_aV05    # Votre clé API (live ou sandbox)
+FEDAPAY_ENVIRONMENT=sandbox                         # Définir l'environnement (sandbox ou live)
+```
+
+- `FEDAPAY_API_KEY` : Cette clé est utilisée pour authentifier votre application auprès de FedaPay. Si vous êtes en **sandbox**, utilisez la clé API en mode test. Pour la production, vous devez utiliser une clé API live.
+- `FEDAPAY_ENVIRONMENT` : Ce paramètre définit si vous êtes en mode **sandbox** (pour les tests) ou **live** (pour la production). Ne changez ce paramètre en **live** que lorsque vous êtes prêt à accepter des paiements réels.
+
+**Note importante sur les clés API :**  
+Les clés **sandbox** sont utilisées pour effectuer des tests sans argent réel, tandis que les clés **live** traitent des transactions réelles. Il est crucial de ne pas exposer votre clé **live** dans le code source ou dans des endroits publics comme GitHub, car elle donne accès à votre compte de production.
+
+## Étape 2 : Routes API Laravel
+
+### 2.1 Définition des routes
+
+Dans le fichier `routes/api.php`, la route pour effectuer une transaction est définie comme suit :
+
+```php
+Route::post('/transaction', [TransactionController::class, 'createTransaction']);
+```
+
+Cela signifie que vous pouvez effectuer une transaction via une requête **POST** sur l'URL `/api/transaction`.
+
+### 2.2 Structure de la réponse
+
+Lors de la création d'une transaction via l'API, une réponse JSON contenant les informations de la transaction sera retournée. Exemple de réponse :
+
+```json
+{
+  "transaction": {
+    "id": 283421,
+    "reference": "trx_sQk_1731420194762",
+    "amount": 2000,
+    "currency": "XOF",
+    "status": "pending",
+    "created_at": "2024-11-12T14:03:14.762Z"
+  }
+}
+```
+
+Si une erreur survient, un message d'erreur détaillé sera retourné, comme dans cet exemple :
+
+```json
+{
+  "error": "Erreur d'authentification"
+}
+```
+
+## Étape 3 : Consommation de l'API dans Flutter
+
+Pour consommer cette API dans une application Flutter, vous devez envoyer une requête POST à l'endpoint `http://<votre_serveur>/api/transaction`. Voici un exemple de code Flutter pour intégrer l'API :
+
+### 3.1 Exemple de code Flutter
+
+```dart
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+Future<void> createTransaction() async {
+  final response = await http.post(
+    Uri.parse('http://<votre_serveur>/api/transaction'),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: json.encode({
+      'description': 'Transaction for John Doe',
+      'amount': 2000,
+      'currency': 'XOF',
+      'callback_url': 'https://votre-callback-url.com/callback',
+      'firstname': 'John',
+      'lastname': 'Doe',
+      'email': 'john.doe@example.com',
+      'phone_number': '+22997808080',
+      'country': 'BJ',
+    }),
+  );
+
+  if (response.statusCode == 200) {
+    print('Transaction réussie: ${response.body}');
+  } else {
+    print('Erreur lors de la création de la transaction: ${response.body}');
+  }
+}
+```
+
+### 3.2 Paramètres de la requête
+
+Les paramètres à envoyer sont :
+
+- **description** : Une description de la transaction.
+- **amount** : Le montant de la transaction (en centimes).
+- **currency** : La devise (par exemple, `XOF` pour le franc CFA).
+- **callback_url** : L'URL qui sera appelée une fois la transaction terminée.
+- **firstname**, **lastname**, **email** : Informations sur le client.
+- **phone_number** : Le numéro de téléphone du client.
+- **country** : Le code du pays du client (ex. : `BJ` pour le Bénin).
+
+### 3.3 Réponse de l'API
+
+La réponse contiendra les informations suivantes sur la transaction :
+
+- **transaction** : Détails de la transaction effectuée (ID, référence, montant, etc.).
+
+Si un problème survient (ex. : mauvaise clé API), un message d'erreur sera renvoyé.
+
+## Étape 4 : Sécurité et bonnes pratiques
+
+### 4.1 Sécuriser l'API
+
+- **Utilisez des clés API différentes pour le mode sandbox et live.** Ne partagez jamais votre clé API live publiquement.
+- **Protégez les informations sensibles**, comme le numéro de téléphone et l'email, en utilisant HTTPS pour toutes les requêtes API.
+
+### 4.2 Validation des entrées
+
+Avant d'envoyer des données à l'API FedaPay, vous devez valider les informations côté client (Flutter) et côté serveur (Laravel) pour éviter les erreurs.
+
+### 4.3 Vérification des erreurs
+
+Si une erreur est renvoyée par l'API, vous devrez gérer correctement les réponses d'erreur côté client et afficher des messages appropriés à l'utilisateur pour qu'il sache ce qui a échoué.
+
+---
+
+## Conclusion
+
+Vous avez maintenant les étapes pour intégrer et utiliser l'API FedaPay dans votre projet Laravel et Flutter. Assurez-vous de bien configurer vos clés API et de respecter les meilleures pratiques pour garantir une utilisation sécurisée et optimale de l'API.
